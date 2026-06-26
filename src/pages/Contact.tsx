@@ -113,7 +113,7 @@ export default function Contact() {
 
               <div className="mt-10">
                 <Button
-                  href={`https://wa.me/${company.whatsapp}`}
+                  href={`https://wa.me/9421889619`}
                   variant="primary"
                   className="inline-flex"
                 >
