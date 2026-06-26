@@ -5,25 +5,25 @@ export const company = {
     "A luxury architecture and construction studio shaping timeless spaces across India.",
   founded: 2008,
   website: "https://sterlingbuild.co",
-  email: "hello@sterlingbuild.co",
-  phone: "+91 98765 43210",
-  phoneDisplay: "+91 98765 43210",
-  whatsapp: "919876543210",
+  email: "vashishtconstructions2304@gmail.com",
+  phone: "+91 9421889619",
+  phoneDisplay: "+91 9421889619",
+  whatsapp: "919421889619",
   address: {
-    line1: "Sterling House, 42 Marine Drive",
-    line2: "Mumbai, Maharashtra 400002",
-    country: "India",
+    line1: "Plot no.9, Vashisht Constructions, Riddhi Siddhi Apartment",
+    line2: "Kothari Nagar, Karvand Road",
+    country: "Shirpur, Maharashtra, India",
   },
   coordinates: {
     lat: 18.9432,
     lng: 72.8235,
   },
   social: {
-    instagram: "https://instagram.com/sterlingbuildco",
+    instagram: "https://instagram.com/vashisht_constructions",
     linkedin: "https://linkedin.com/company/sterlingbuildco",
     facebook: "https://facebook.com/sterlingbuildco",
   },
-  hours: "Mon – Sat, 9:00 AM – 6:00 PM",
+  hours: "All Days, 9:00 AM – 9:00 PM",
 } as const;
 
 export const about = {
@@ -75,7 +75,7 @@ export const timeline = [
     year: "2008",
     title: "Foundation",
     description:
-      "Vashisht Constructions established in Mumbai with a focus on bespoke residential villas.",
+      "Vashisht Constructions established in Shirpur with a focus on bespoke residential villas.",
   },
   {
     year: "2012",
