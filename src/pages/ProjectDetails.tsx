@@ -6,11 +6,12 @@ import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { ProjectGallery } from '@/components/projects/ProjectGallery';
 import { ProjectCard } from '@/components/projects/ProjectCard';
-import { getProjectBySlug, getRelatedProjects } from '@/data/projects';
+import { useContent } from '@/context/ContentContext';
 import { formatStatus, formatType, formatCompletionDate } from '@/utils/project';
 
 export default function ProjectDetails() {
   const { slug } = useParams<{ slug: string }>();
+  const { getProjectBySlug, getRelatedProjects } = useContent();
   const project = slug ? getProjectBySlug(slug) : undefined;
 
   if (!project) {

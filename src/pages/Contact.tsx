@@ -4,10 +4,12 @@ import { SEO } from "@/components/common/SEO";
 import { Container } from "@/components/common/Container";
 import { SectionTitle } from "@/components/common/SectionTitle";
 import { Button } from "@/components/common/Button";
-import { company } from "@/constants/company";
-import { faq } from "@/constants/faq";
+import { useContent } from "@/context/ContentContext";
 
 export default function Contact() {
+  const { content } = useContent();
+  const company = content.company;
+  const faq = content.faq;
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -34,7 +36,7 @@ export default function Contact() {
     <>
       <SEO
         title="Contact"
-        description="Get in touch with Vashisht Constructions to discuss your next residential or commercial project."
+        description={`Get in touch with ${company.name} to discuss your next residential or commercial project.`}
         path="/contact"
       />
 
@@ -113,7 +115,7 @@ export default function Contact() {
 
               <div className="mt-10">
                 <Button
-                  href={`https://wa.me/9421889619`}
+                  href={`https://wa.me/${company.whatsapp}`}
                   variant="primary"
                   className="inline-flex"
                 >
@@ -124,7 +126,7 @@ export default function Contact() {
 
               <div className="mt-12 aspect-video overflow-hidden bg-stone">
                 <iframe
-                  title="Vashisht Constructions office location"
+                  title={`${company.name} office location`}
                   src={`https://maps.google.com/maps?q=${company.coordinates.lat},${company.coordinates.lng}&z=15&output=embed`}
                   className="h-full w-full border-0"
                   loading="lazy"

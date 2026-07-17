@@ -4,10 +4,11 @@ import { ArrowUpRight } from 'lucide-react';
 import { Container } from '@/components/common/Container';
 import { SectionTitle } from '@/components/common/SectionTitle';
 import { Badge } from '@/components/common/Badge';
-import { getFeaturedProjects } from '@/data/projects';
+import { useContent } from '@/context/ContentContext';
 import { formatStatus } from '@/utils/project';
 
 export function FeaturedProjects() {
+  const { getFeaturedProjects } = useContent();
   const featured = getFeaturedProjects();
 
   return (

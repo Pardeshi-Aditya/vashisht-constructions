@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
-import { company } from '@/constants/company';
 import { navigation } from '@/constants/navigation';
 import { useScrollPosition } from '@/hooks/useScrollPosition';
+import { useContent } from '@/context/ContentContext';
 import { cn } from '@/utils/cn';
 
 interface NavbarProps {
@@ -12,6 +12,8 @@ interface NavbarProps {
 }
 
 export function Navbar({ transparent = false }: NavbarProps) {
+  const { content } = useContent();
+  const company = content.company;
   const [isOpen, setIsOpen] = useState(false);
   const isScrolled = useScrollPosition(50);
   const location = useLocation();

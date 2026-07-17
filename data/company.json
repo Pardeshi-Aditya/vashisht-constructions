@@ -1,0 +1,26 @@
+{
+  "name": "Vashisht Constructions",
+  "tagline": "Crafted for Living",
+  "shortDescription": "A luxury architecture and construction studio shaping timeless spaces across India.",
+  "founded": 2008,
+  "website": "https://sterlingbuild.co",
+  "email": "vashishtconstructions2304@gmail.com",
+  "phone": "+91 9421889619",
+  "phoneDisplay": "+91 9421889619",
+  "whatsapp": "919421889619",
+  "address": {
+    "line1": "Plot no.9, Vashisht Constructions, Riddhi Siddhi Apartment",
+    "line2": "Kothari Nagar, Karvand Road",
+    "country": "Shirpur, Maharashtra, India"
+  },
+  "coordinates": {
+    "lat": 21.3484,
+    "lng": 74.8804
+  },
+  "social": {
+    "instagram": "https://instagram.com/vashisht_constructions",
+    "linkedin": "https://linkedin.com/company/sterlingbuildco",
+    "facebook": "https://facebook.com/sterlingbuildco"
+  },
+  "hours": "All Days, 9:00 AM – 9:00 PM"
+}

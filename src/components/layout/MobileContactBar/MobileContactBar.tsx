@@ -1,7 +1,10 @@
 import { Phone } from 'lucide-react';
-import { company } from '@/constants/company';
+import { useContent } from '@/context/ContentContext';
 
 export function MobileContactBar() {
+  const { content } = useContent();
+  const company = content.company;
+
   return (
     <div className="fixed right-0 bottom-0 left-0 z-40 border-t border-stone bg-off-white/95 backdrop-blur-sm md:hidden">
       <div className="grid grid-cols-2">

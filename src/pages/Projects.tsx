@@ -4,16 +4,17 @@ import { Container } from '@/components/common/Container';
 import { SectionTitle } from '@/components/common/SectionTitle';
 import { ProjectFilters } from '@/components/projects/ProjectFilters';
 import { ProjectGrid } from '@/components/projects/ProjectGrid';
-import { projects } from '@/data/projects';
 import { filterProjects } from '@/utils/project';
 import type { ProjectFilter } from '@/types/project';
+import { useContent } from '@/context/ContentContext';
 
 export default function Projects() {
   const [activeFilter, setActiveFilter] = useState<ProjectFilter>('all');
+  const { projects } = useContent();
 
   const filteredProjects = useMemo(
     () => filterProjects(projects, activeFilter),
-    [activeFilter],
+    [activeFilter, projects],
   );
 
   return (

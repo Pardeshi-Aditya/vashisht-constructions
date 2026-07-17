@@ -1,0 +1,23 @@
+[
+  {
+    "value": 15,
+    "suffix": "+",
+    "label": "Years of Excellence"
+  },
+  {
+    "value": 48,
+    "suffix": "",
+    "label": "Projects Delivered"
+  },
+  {
+    "value": 2.4,
+    "suffix": "M",
+    "label": "Sq. Ft. Constructed",
+    "decimals": 1
+  },
+  {
+    "value": 98,
+    "suffix": "%",
+    "label": "Client Satisfaction"
+  }
+]

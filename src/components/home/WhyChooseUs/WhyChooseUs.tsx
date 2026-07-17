@@ -1,9 +1,12 @@
 import { motion } from 'framer-motion';
 import { Container } from '@/components/common/Container';
 import { SectionTitle } from '@/components/common/SectionTitle';
-import { whyChooseUs } from '@/constants/company';
+import { useContent } from '@/context/ContentContext';
 
 export function WhyChooseUs() {
+  const { content } = useContent();
+  const whyChooseUs = content.whyChooseUs;
+
   return (
     <section className="py-20 sm:py-28 lg:py-32" aria-labelledby="why-choose-us">
       <Container>

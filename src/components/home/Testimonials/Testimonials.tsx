@@ -1,9 +1,12 @@
 import { motion } from 'framer-motion';
 import { Container } from '@/components/common/Container';
 import { SectionTitle } from '@/components/common/SectionTitle';
-import { testimonials } from '@/constants/testimonials';
+import { useContent } from '@/context/ContentContext';
 
 export function Testimonials() {
+  const { content } = useContent();
+  const testimonials = content.testimonials;
+
   return (
     <section className="bg-white py-20 sm:py-28 lg:py-32" aria-labelledby="testimonials">
       <Container>

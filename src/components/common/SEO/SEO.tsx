@@ -1,5 +1,5 @@
 import { Helmet } from 'react-helmet-async';
-import { company } from '@/constants/company';
+import { useContent } from '@/context/ContentContext';
 import { getCanonicalUrl, getLocalBusinessSchema } from '@/utils/seo';
 
 interface SEOProps {
@@ -11,8 +11,10 @@ interface SEOProps {
 }
 
 export function SEO({ title, description, path = '', image, noIndex = false }: SEOProps) {
+  const { content } = useContent();
+  const company = content.company;
   const fullTitle = title === company.name ? title : `${title} | ${company.name}`;
-  const canonical = getCanonicalUrl(path);
+  const canonical = getCanonicalUrl(company.website, path);
   const ogImage = image ?? `${company.website}/og-image.jpg`;
 
   return (
@@ -35,7 +37,7 @@ export function SEO({ title, description, path = '', image, noIndex = false }: S
       <meta name="twitter:image" content={ogImage} />
 
       <script type="application/ld+json">
-        {JSON.stringify(getLocalBusinessSchema())}
+        {JSON.stringify(getLocalBusinessSchema(company))}
       </script>
     </Helmet>
   );

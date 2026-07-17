@@ -1,11 +1,13 @@
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowUpRight } from "lucide-react";
-import { Container } from "@/components/common/Container";
-import { about } from "@/constants/company";
-import studioImage from "@/assets/images/about/studio.webp";
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { ArrowUpRight } from 'lucide-react';
+import { Container } from '@/components/common/Container';
+import { useContent } from '@/context/ContentContext';
 
 export function AboutPreview() {
+  const { content } = useContent();
+  const { about, aboutImage, company } = content;
+
   return (
     <section
       className="bg-white py-20 sm:py-28 lg:py-32"
@@ -16,13 +18,13 @@ export function AboutPreview() {
           <motion.div
             initial={{ opacity: 0, x: -24 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
+            viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.45 }}
             className="relative aspect-[4/5] overflow-hidden bg-stone lg:aspect-[3/4]"
           >
             <img
-              src={studioImage}
-              alt="Vashisht Constructions studio"
+              src={aboutImage}
+              alt={`${company.name} studio`}
               loading="lazy"
               className="h-full w-full object-cover"
             />
@@ -31,7 +33,7 @@ export function AboutPreview() {
           <motion.div
             initial={{ opacity: 0, x: 24 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
+            viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.45, delay: 0.1 }}
           >
             <p className="text-[10px] font-medium tracking-[0.2em] text-warm-gray uppercase">

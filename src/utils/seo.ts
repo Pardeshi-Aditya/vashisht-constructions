@@ -1,20 +1,12 @@
-import { company } from '@/constants/company';
+import type { CompanyInfo } from '@/types/cms';
 
-export interface SEOProps {
-  title: string;
-  description: string;
-  path?: string;
-  image?: string;
-  type?: 'website' | 'article';
-}
-
-export function getCanonicalUrl(path = ''): string {
-  const base = company.website.replace(/\/$/, '');
+export function getCanonicalUrl(website: string, path = ''): string {
+  const base = website.replace(/\/$/, '');
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   return `${base}${normalizedPath === '/' ? '' : normalizedPath}`;
 }
 
-export function getLocalBusinessSchema() {
+export function getLocalBusinessSchema(company: CompanyInfo) {
   return {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
@@ -25,10 +17,8 @@ export function getLocalBusinessSchema() {
     email: company.email,
     address: {
       '@type': 'PostalAddress',
-      streetAddress: company.address.line1,
-      addressLocality: 'Mumbai',
-      addressRegion: 'Maharashtra',
-      postalCode: '400002',
+      streetAddress: `${company.address.line1}, ${company.address.line2}`,
+      addressLocality: company.address.country,
       addressCountry: 'IN',
     },
     geo: {
@@ -36,7 +26,7 @@ export function getLocalBusinessSchema() {
       latitude: company.coordinates.lat,
       longitude: company.coordinates.lng,
     },
-    openingHours: 'Mo-Sa 09:00-18:00',
+    openingHours: company.hours,
     sameAs: Object.values(company.social),
   };
 }

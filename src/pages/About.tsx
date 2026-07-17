@@ -1,12 +1,14 @@
-import { motion } from "framer-motion";
-import { SEO } from "@/components/common/SEO";
-import { Container } from "@/components/common/Container";
-import { SectionTitle } from "@/components/common/SectionTitle";
-import { Stats } from "@/components/home/Stats";
-import { about, timeline } from "@/constants/company";
-import studioImage from "@/assets/images/about/studio.webp";
+import { motion } from 'framer-motion';
+import { SEO } from '@/components/common/SEO';
+import { Container } from '@/components/common/Container';
+import { SectionTitle } from '@/components/common/SectionTitle';
+import { Stats } from '@/components/home/Stats';
+import { useContent } from '@/context/ContentContext';
 
 export default function About() {
+  const { content } = useContent();
+  const { about, timeline, aboutImage, company } = content;
+
   return (
     <>
       <SEO title="About" description={about.intro} path="/about" />
@@ -26,8 +28,8 @@ export default function About() {
           <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
             <div className="relative aspect-[4/3] overflow-hidden bg-stone">
               <img
-                src={studioImage}
-                alt="Vashisht Constructions team at work"
+                src={aboutImage}
+                alt={`${company.name} team at work`}
                 loading="lazy"
                 className="h-full w-full object-cover"
               />
@@ -74,12 +76,12 @@ export default function About() {
 
       <section className="bg-white py-16 sm:py-24">
         <Container>
-          <SectionTitle eyebrow="Timeline" title={["Our", "Journey"]} />
+          <SectionTitle eyebrow="Timeline" title={['Our', 'Journey']} />
 
           <div className="mt-16 space-y-0">
             {timeline.map((item, index) => (
               <motion.div
-                key={item.year}
+                key={`${item.year}-${item.title}`}
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}

@@ -1,21 +1,24 @@
 import { Link } from 'react-router-dom';
-import { company, footer } from '@/constants/company';
 import { footerNavigation } from '@/constants/navigation';
 import { Container } from '@/components/common/Container';
 import { SocialIcon } from '@/components/common/SocialIcon';
-
-const socialLinks = [
-  { href: company.social.instagram, name: 'instagram' as const, label: 'Instagram' },
-  { href: company.social.linkedin, name: 'linkedin' as const, label: 'LinkedIn' },
-  { href: company.social.facebook, name: 'facebook' as const, label: 'Facebook' },
-];
+import { useContent } from '@/context/ContentContext';
 
 export function Footer() {
+  const { content } = useContent();
+  const { company, footer } = content;
+
+  const socialLinks = [
+    { href: company.social.instagram, name: 'instagram' as const, label: 'Instagram' },
+    { href: company.social.linkedin, name: 'linkedin' as const, label: 'LinkedIn' },
+    { href: company.social.facebook, name: 'facebook' as const, label: 'Facebook' },
+  ];
+
   return (
     <footer className="bg-charcoal text-white">
       <Container className="py-20 sm:py-28 lg:py-32">
         <div className="max-w-3xl">
-          <h2 className="heading-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-white">
+          <h2 className="heading-display text-4xl text-white sm:text-5xl md:text-6xl lg:text-7xl">
             {footer.headline}
           </h2>
           <p className="mt-8 max-w-md text-base leading-relaxed text-white/60 sm:text-lg">

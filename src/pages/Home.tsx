@@ -6,9 +6,12 @@ import { Stats } from '@/components/home/Stats';
 import { WhyChooseUs } from '@/components/home/WhyChooseUs';
 import { Testimonials } from '@/components/home/Testimonials';
 import { CTA } from '@/components/home/CTA';
-import { company } from '@/constants/company';
+import { useContent } from '@/context/ContentContext';
 
 export default function Home() {
+  const { content } = useContent();
+  const company = content.company;
+
   return (
     <>
       <SEO

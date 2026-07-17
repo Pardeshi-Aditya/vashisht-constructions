@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { Container } from '@/components/common/Container';
-import { stats } from '@/constants/company';
+import { useContent } from '@/context/ContentContext';
 
 function AnimatedNumber({
   value,
@@ -47,6 +47,9 @@ function AnimatedNumber({
 }
 
 export function Stats() {
+  const { content } = useContent();
+  const stats = content.stats;
+
   return (
     <section className="border-y border-stone bg-off-white py-16 sm:py-20" aria-label="Company statistics">
       <Container>
@@ -64,7 +67,7 @@ export function Stats() {
                 <AnimatedNumber
                   value={stat.value}
                   suffix={stat.suffix}
-                  decimals={'decimals' in stat ? stat.decimals : 0}
+                  decimals={stat.decimals ?? 0}
                 />
               </p>
               <p className="mt-2 text-xs tracking-widest text-warm-gray uppercase">
