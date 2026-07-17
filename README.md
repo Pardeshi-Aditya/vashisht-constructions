@@ -87,7 +87,7 @@ In Netlify environment variables set:
 - `GITHUB_REPO` — `owner/repo`
 - `GITHUB_BRANCH` — usually `main`
 
-Then production admin saves can commit JSON changes and trigger a redeploy automatically.
+Then production admin saves **and image uploads** can commit to GitHub and trigger a redeploy automatically.
 
 ## Deploy to Netlify
 

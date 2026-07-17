@@ -70,10 +70,18 @@ export function ImageUpload({
         filename: filename || file.name.replace(/\.[^.]+$/, '') || 'image',
       });
       onChange(url);
+      // Keep local preview until the committed/static asset is reachable
+      // (production images appear after Netlify redeploy).
+      const probe = new Image();
+      probe.onload = () => setObjectPreview(null);
+      probe.onerror = () => {
+        /* keep blob preview; path is already stored for save */
+      };
+      probe.src = url;
     } catch (err) {
+      setObjectPreview(null);
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
-      setObjectPreview(null);
       setLoading(false);
     }
   };

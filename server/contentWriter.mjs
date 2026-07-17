@@ -94,6 +94,25 @@ function sanitizeFilename(filename) {
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
 /**
+ * Resolve where an upload should live (public URL + repo path) without writing.
+ */
+export function resolveUploadPaths({
+  mimeType = 'image/jpeg',
+  folder = 'uploads',
+  filename,
+}) {
+  const safeFolder = sanitizeFolder(folder);
+  const safeName = sanitizeFilename(filename);
+  const ext = extensionFromMime(mimeType);
+  const publicPath = `/images/${safeFolder}/${safeName}.${ext}`;
+  return {
+    publicPath,
+    repoPath: `public${publicPath}`,
+    ext,
+  };
+}
+
+/**
  * Write a binary image buffer into public/images/{folder}/{filename}.{ext}
  * and return the public path string.
  */
@@ -114,15 +133,12 @@ export function saveUploadedImageBuffer({
     );
   }
 
-  const safeFolder = sanitizeFolder(folder);
-  const safeName = sanitizeFilename(filename);
-  const ext = extensionFromMime(mimeType);
-  const relative = `/images/${safeFolder}/${safeName}.${ext}`;
-  const absolute = path.join(ROOT, 'public', relative.replace(/^\//, ''));
+  const { publicPath } = resolveUploadPaths({ mimeType, folder, filename });
+  const absolute = path.join(ROOT, 'public', publicPath.replace(/^\//, ''));
 
   ensureDir(path.dirname(absolute));
   fs.writeFileSync(absolute, buffer);
-  return relative;
+  return publicPath;
 }
 
 /**

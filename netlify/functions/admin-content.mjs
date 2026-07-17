@@ -1,6 +1,8 @@
 import {
   assertNoEmbeddedImages,
+  MAX_IMAGE_BYTES,
   readSiteContent,
+  resolveUploadPaths,
   saveUploadedImageBuffer,
   writeSiteContent,
 } from '../../server/contentWriter.mjs';
@@ -28,14 +30,11 @@ function isAuthorized(event) {
 /**
  * Production admin API.
  *
- * On Netlify the function filesystem is read-only for the deploy bundle,
- * so this writes to Netlify Blobs when available, and also supports
- * local `netlify dev` which can write files via the shared writer.
- *
- * For Git-backed global updates, set:
+ * Netlify's function bundle is read-only, so filesystem writes only work in
+ * `netlify dev` / local Vite. Production persistence uses GitHub commits:
  *   GITHUB_TOKEN, GITHUB_REPO (owner/repo), GITHUB_BRANCH (default main)
  */
-async function commitToGitHub(files) {
+async function commitToGitHub(files, message = 'chore: update site content from admin') {
   const token = process.env.GITHUB_TOKEN;
   const repo = process.env.GITHUB_REPO;
   const branch = process.env.GITHUB_BRANCH || 'main';
@@ -82,7 +81,12 @@ async function commitToGitHub(files) {
         encoding: file.encoding || 'utf-8',
       }),
     });
-    if (!blobRes.ok) throw new Error(`Failed to create blob for ${file.path}`);
+    if (!blobRes.ok) {
+      const detail = await blobRes.text().catch(() => '');
+      throw new Error(
+        `Failed to create blob for ${file.path}${detail ? `: ${detail.slice(0, 200)}` : ''}`,
+      );
+    }
     const blob = await blobRes.json();
     treeItems.push({
       path: file.path,
@@ -107,7 +111,7 @@ async function commitToGitHub(files) {
     method: 'POST',
     headers,
     body: JSON.stringify({
-      message: 'chore: update site content from admin',
+      message,
       tree: tree.sha,
       parents: [baseSha],
     }),
@@ -221,28 +225,96 @@ export async function handler(event) {
 
     if (event.httpMethod === 'POST' && requestPath.includes('/upload')) {
       const query = getQuery(event);
-      try {
-        const buffer = readBinaryBody(event);
-        const mimeType =
-          event.headers['content-type'] ||
-          event.headers['Content-Type'] ||
-          'image/jpeg';
-        const url = saveUploadedImageBuffer({
-          buffer,
-          mimeType,
-          folder: query.folder || 'uploads',
-          filename: query.filename || `image-${Date.now()}`,
+      const buffer = readBinaryBody(event);
+      const mimeType =
+        event.headers['content-type'] ||
+        event.headers['Content-Type'] ||
+        'image/jpeg';
+      const folder = query.folder || 'uploads';
+      const filename = query.filename || `image-${Date.now()}`;
+
+      if (!buffer.length) {
+        return json(400, {
+          ok: false,
+          error: 'Empty upload body. Send the image as raw binary.',
         });
-        return json(200, { ok: true, url, persisted: 'filesystem' });
+      }
+
+      if (buffer.length > MAX_IMAGE_BYTES) {
+        const sizeMb = (buffer.length / (1024 * 1024)).toFixed(1);
+        return json(400, {
+          ok: false,
+          error: `Image is ${sizeMb}MB. Maximum allowed size is 2MB.`,
+        });
+      }
+
+      const { publicPath, repoPath } = resolveUploadPaths({
+        mimeType,
+        folder,
+        filename,
+      });
+
+      const persisted = [];
+      const allowFilesystem =
+        !process.env.AWS_LAMBDA_FUNCTION_NAME ||
+        process.env.NETLIFY_DEV === 'true';
+
+      if (allowFilesystem) {
+        try {
+          saveUploadedImageBuffer({ buffer, mimeType, folder, filename });
+          persisted.push('filesystem');
+        } catch {
+          // Ignore — production path uses GitHub below
+        }
+      }
+
+      // Production (and optional local): commit into the repo so deploys serve the asset
+      let git;
+      try {
+        git = await commitToGitHub(
+          [
+            {
+              path: repoPath,
+              content: buffer.toString('base64'),
+              encoding: 'base64',
+            },
+          ],
+          `chore: upload ${repoPath} from admin`,
+        );
+        if (git.committed) persisted.push('github');
       } catch (error) {
+        if (!persisted.length) {
+          return json(502, {
+            ok: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : 'Failed to commit image to GitHub',
+          });
+        }
+        git = {
+          committed: false,
+          reason: error instanceof Error ? error.message : 'GitHub commit failed',
+        };
+      }
+
+      if (!persisted.length) {
         return json(501, {
           ok: false,
           error:
-            error instanceof Error
-              ? error.message
-              : 'Image upload requires local `npm run dev` or a writable filesystem. Upload during local admin, then deploy.',
+            'Image upload requires GITHUB_TOKEN + GITHUB_REPO on Netlify (production), or local `npm run dev` for filesystem writes.',
         });
       }
+
+      return json(200, {
+        ok: true,
+        url: publicPath,
+        persisted: persisted.join('+'),
+        git,
+        message: git?.committed
+          ? 'Image committed to GitHub. It will be live after Netlify redeploys.'
+          : 'Image saved to public/images.',
+      });
     }
 
     if (event.httpMethod === 'POST' && requestPath.includes('/content')) {
