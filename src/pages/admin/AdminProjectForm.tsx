@@ -39,7 +39,7 @@ export default function AdminProjectForm() {
   const { id } = useParams<{ id: string }>();
   const isNew = !id || id === 'new';
   const navigate = useNavigate();
-  const { getProjectById, saveProject, projects } = useContent();
+  const { getProjectById, saveProject, projects, saving } = useContent();
   const [form, setForm] = useState<Project>(emptyProject);
   const [toast, setToast] = useState('');
   const [slugTouched, setSlugTouched] = useState(false);
@@ -106,11 +106,7 @@ export default function AdminProjectForm() {
 
     try {
       await saveProject(cleaned);
-      setToast('Project saved to data/projects');
-      setTimeout(() => {
-        setToast('');
-        navigate('/admin/projects');
-      }, 700);
+      navigate('/admin/projects');
     } catch (error) {
       setToast(error instanceof Error ? error.message : 'Save failed');
       setTimeout(() => setToast(''), 3500);
@@ -375,20 +371,30 @@ export default function AdminProjectForm() {
         </AdminCard>
 
         <div className="flex flex-wrap gap-3">
-          <AdminButton type="submit" variant="primary">
-            {isNew ? 'Create Project' : 'Save Changes'}
+          <AdminButton type="submit" variant="primary" disabled={saving}>
+            {saving ? 'Saving…' : isNew ? 'Create Project' : 'Save Changes'}
           </AdminButton>
           <AdminButton
             type="button"
             variant="outline"
             onClick={() => navigate('/admin/projects')}
+            disabled={saving}
           >
             Cancel
           </AdminButton>
         </div>
       </form>
 
-      {toast && <Toast message={toast} type={toast.includes('required') || toast.includes('Slug') ? 'error' : 'success'} />}
+      {toast && (
+        <Toast
+          message={toast}
+          type={
+            /required|slug|fail|not allowed|invalid|upload/i.test(toast)
+              ? 'error'
+              : 'success'
+          }
+        />
+      )}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useContent } from '@/context/ContentContext';
+import { AdminBusyOverlay } from '@/components/admin/ui';
 import { cn } from '@/utils/cn';
 
 const navItems = [
@@ -31,7 +32,7 @@ const navItems = [
 
 export function AdminLayout() {
   const { logout } = useAuth();
-  const { content } = useContent();
+  const { content, saving } = useContent();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -158,6 +159,8 @@ export function AdminLayout() {
           </aside>
         </div>
       )}
+
+      <AdminBusyOverlay show={saving} label="Saving…" />
     </div>
   );
 }

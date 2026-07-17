@@ -13,7 +13,7 @@ import {
 import { ImageUpload } from '@/components/admin/ImageUpload';
 
 export default function AdminHome() {
-  const { content, updateContent } = useContent();
+  const { content, updateContent, saving } = useContent();
   const [hero, setHero] = useState<HeroInfo>(content.hero);
   const [stats, setStats] = useState<StatItem[]>(content.stats);
   const [whyChooseUs, setWhyChooseUs] = useState<WhyChooseItem[]>(
@@ -227,8 +227,8 @@ export default function AdminHome() {
           </div>
         </AdminCard>
 
-        <AdminButton type="submit" variant="primary">
-          Save Changes
+        <AdminButton type="submit" variant="primary" disabled={saving}>
+          {saving ? 'Saving…' : 'Save Changes'}
         </AdminButton>
       </form>
 

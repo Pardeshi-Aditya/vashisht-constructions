@@ -1,19 +1,21 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useContent } from '@/context/ContentContext';
-import { AdminPageHeader, AdminButton } from '@/components/admin/ui';
+import { AdminPageHeader, AdminButton, Toast } from '@/components/admin/ui';
 import { formatStatus, formatType } from '@/utils/project';
 
 export default function AdminProjects() {
-  const { projects, deleteProject } = useContent();
+  const { projects, deleteProject, saving } = useContent();
+  const [toast, setToast] = useState('');
 
   const handleDelete = async (id: string, name: string) => {
-    if (window.confirm(`Delete “${name}”? This cannot be undone.`)) {
-      try {
-        await deleteProject(id);
-      } catch {
-        window.alert('Failed to delete project. Is the dev server running?');
-      }
+    if (!window.confirm(`Delete “${name}”? This cannot be undone.`)) return;
+    try {
+      await deleteProject(id);
+    } catch {
+      setToast('Failed to delete project. Is the dev server running?');
+      setTimeout(() => setToast(''), 3000);
     }
   };
 
@@ -83,6 +85,7 @@ export default function AdminProjects() {
                     className="!px-3"
                     onClick={() => handleDelete(project.id, project.name)}
                     aria-label={`Delete ${project.name}`}
+                    disabled={saving}
                   >
                     <Trash2 size={14} strokeWidth={1.5} />
                   </AdminButton>
@@ -92,6 +95,8 @@ export default function AdminProjects() {
           </ul>
         </div>
       )}
+
+      {toast && <Toast message={toast} type="error" />}
     </div>
   );
 }

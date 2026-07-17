@@ -1,7 +1,8 @@
 import {
+  assertNoEmbeddedImages,
+  handleBinaryImageUpload,
   parseBody,
   readSiteContent,
-  saveUploadedImage,
   sendJson,
   writeSiteContent,
 } from '../server/contentWriter.mjs';
@@ -34,26 +35,60 @@ export function contentApiPlugin() {
         }
 
         try {
-          if (req.method === 'GET' && req.url === '/api/admin/content') {
+          if (req.method === 'GET' && req.url.split('?')[0] === '/api/admin/content') {
             sendJson(res, 200, { ok: true, content: readSiteContent() });
             return;
           }
 
-          if (req.method === 'POST' && req.url === '/api/admin/content') {
-            const body = await parseBody(req);
-            const content = writeSiteContent(body.content);
-            sendJson(res, 200, {
-              ok: true,
-              content,
-              message: 'Content saved to data/ JSON files',
-            });
+          if (req.method === 'POST' && req.url.split('?')[0] === '/api/admin/content') {
+            let body;
+            try {
+              body = await parseBody(req);
+            } catch (error) {
+              sendJson(res, 400, {
+                ok: false,
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : 'Invalid JSON payload. Upload images via /api/admin/upload first.',
+              });
+              return;
+            }
+
+            try {
+              assertNoEmbeddedImages(body.content);
+              const { content } = writeSiteContent(body.content);
+              sendJson(res, 200, {
+                ok: true,
+                content,
+                message: 'Content saved to data/ JSON files',
+              });
+            } catch (error) {
+              sendJson(res, 400, {
+                ok: false,
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : 'Invalid content payload',
+              });
+            }
             return;
           }
 
-          if (req.method === 'POST' && req.url === '/api/admin/upload') {
-            const body = await parseBody(req);
-            const url = saveUploadedImage(body);
-            sendJson(res, 200, { ok: true, url });
+          if (
+            req.method === 'POST' &&
+            req.url.split('?')[0] === '/api/admin/upload'
+          ) {
+            try {
+              const url = await handleBinaryImageUpload(req);
+              sendJson(res, 200, { ok: true, url });
+            } catch (error) {
+              sendJson(res, 400, {
+                ok: false,
+                error:
+                  error instanceof Error ? error.message : 'Upload failed',
+              });
+            }
             return;
           }
 

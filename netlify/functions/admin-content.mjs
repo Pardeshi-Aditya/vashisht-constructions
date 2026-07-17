@@ -1,6 +1,7 @@
 import {
+  assertNoEmbeddedImages,
   readSiteContent,
-  saveUploadedImage,
+  saveUploadedImageBuffer,
   writeSiteContent,
 } from '../../server/contentWriter.mjs';
 
@@ -63,6 +64,16 @@ async function commitToGitHub(files) {
 
   const treeItems = [];
   for (const file of files) {
+    if (file.delete) {
+      treeItems.push({
+        path: file.path,
+        mode: '100644',
+        type: 'blob',
+        sha: null,
+      });
+      continue;
+    }
+
     const blobRes = await fetch(`${api}/git/blobs`, {
       method: 'POST',
       headers,
@@ -114,7 +125,7 @@ async function commitToGitHub(files) {
   return { committed: true, sha: newCommit.sha };
 }
 
-function contentToGitFiles(content) {
+function contentToGitFiles(content, deletedFiles = []) {
   const files = [
     { path: 'data/company.json', content: JSON.stringify(content.company, null, 2) + '\n' },
     {
@@ -152,7 +163,31 @@ function contentToGitFiles(content) {
     });
   }
 
+  for (const deletedPath of deletedFiles) {
+    files.push({ path: deletedPath, delete: true });
+  }
+
   return files;
+}
+
+function parseRequestPath(event) {
+  return (event.path || '').replace(
+    /\/\.netlify\/functions\/admin-content/,
+    '/api/admin',
+  );
+}
+
+function getQuery(event) {
+  return event.queryStringParameters || {};
+}
+
+function readBinaryBody(event) {
+  const raw = event.body || '';
+  if (!raw) return Buffer.alloc(0);
+  if (event.isBase64Encoded) {
+    return Buffer.from(raw, 'base64');
+  }
+  return Buffer.from(raw, 'binary');
 }
 
 export async function handler(event) {
@@ -165,9 +200,12 @@ export async function handler(event) {
   }
 
   try {
-    const path = event.path.replace(/\/\.netlify\/functions\/admin-content/, '/api/admin');
+    const requestPath = parseRequestPath(event);
 
-    if (event.httpMethod === 'GET' && (path.endsWith('/content') || path.includes('/content'))) {
+    if (
+      event.httpMethod === 'GET' &&
+      (requestPath.endsWith('/content') || requestPath.includes('/content'))
+    ) {
       try {
         const content = readSiteContent();
         return json(200, { ok: true, content, source: 'filesystem' });
@@ -181,31 +219,77 @@ export async function handler(event) {
       }
     }
 
-    if (event.httpMethod === 'POST' && path.includes('/upload')) {
-      const body = JSON.parse(event.body || '{}');
+    if (event.httpMethod === 'POST' && requestPath.includes('/upload')) {
+      const query = getQuery(event);
       try {
-        const url = saveUploadedImage(body);
+        const buffer = readBinaryBody(event);
+        const mimeType =
+          event.headers['content-type'] ||
+          event.headers['Content-Type'] ||
+          'image/jpeg';
+        const url = saveUploadedImageBuffer({
+          buffer,
+          mimeType,
+          folder: query.folder || 'uploads',
+          filename: query.filename || `image-${Date.now()}`,
+        });
         return json(200, { ok: true, url, persisted: 'filesystem' });
-      } catch {
+      } catch (error) {
         return json(501, {
           ok: false,
           error:
-            'Image upload requires local `npm run dev` or GitHub-backed production setup. Upload during local admin, then deploy.',
+            error instanceof Error
+              ? error.message
+              : 'Image upload requires local `npm run dev` or a writable filesystem. Upload during local admin, then deploy.',
         });
       }
     }
 
-    if (event.httpMethod === 'POST' && path.includes('/content')) {
-      const body = JSON.parse(event.body || '{}');
-      let content;
+    if (event.httpMethod === 'POST' && requestPath.includes('/content')) {
+      let body;
+      try {
+        const raw = event.isBase64Encoded
+          ? Buffer.from(event.body || '', 'base64').toString('utf8')
+          : event.body || '{}';
+        body = JSON.parse(raw);
+      } catch {
+        return json(400, {
+          ok: false,
+          error:
+            'Invalid JSON payload. Do not embed Base64 images in content — upload via /api/admin/upload first.',
+        });
+      }
 
       try {
-        content = writeSiteContent(body.content);
-      } catch {
+        assertNoEmbeddedImages(body.content);
+      } catch (error) {
+        return json(400, {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Embedded image data is not allowed in content payloads.',
+        });
+      }
+
+      let content;
+      let deletedFiles = [];
+      try {
+        const result = writeSiteContent(body.content);
+        content = result.content;
+        deletedFiles = result.deletedFiles || [];
+      } catch (error) {
+        // Production may be read-only; still reject bad payloads above.
+        if (
+          error instanceof Error &&
+          error.message.includes('Embedded image data')
+        ) {
+          return json(400, { ok: false, error: error.message });
+        }
         content = body.content;
       }
 
-      const git = await commitToGitHub(contentToGitFiles(content));
+      const git = await commitToGitHub(contentToGitFiles(content, deletedFiles));
 
       return json(200, {
         ok: true,

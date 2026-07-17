@@ -11,7 +11,7 @@ import {
 } from '@/components/admin/ui';
 
 export default function AdminCompany() {
-  const { content, updateContent } = useContent();
+  const { content, updateContent, saving } = useContent();
   const [form, setForm] = useState<CompanyInfo>(content.company);
   const [toast, setToast] = useState(false);
 
@@ -187,8 +187,8 @@ export default function AdminCompany() {
           </div>
         </AdminCard>
 
-        <AdminButton type="submit" variant="primary">
-          Save Changes
+        <AdminButton type="submit" variant="primary" disabled={saving}>
+          {saving ? 'Saving…' : 'Save Changes'}
         </AdminButton>
       </form>
 

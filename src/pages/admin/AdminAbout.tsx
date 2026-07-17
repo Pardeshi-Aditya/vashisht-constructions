@@ -13,7 +13,7 @@ import {
 import { ImageUpload } from '@/components/admin/ImageUpload';
 
 export default function AdminAbout() {
-  const { content, updateContent } = useContent();
+  const { content, updateContent, saving } = useContent();
   const [about, setAbout] = useState<AboutInfo>(content.about);
   const [timeline, setTimeline] = useState<TimelineItem[]>(content.timeline);
   const [aboutImage, setAboutImage] = useState(content.aboutImage);
@@ -201,8 +201,8 @@ export default function AdminAbout() {
           </div>
         </AdminCard>
 
-        <AdminButton type="submit" variant="primary">
-          Save Changes
+        <AdminButton type="submit" variant="primary" disabled={saving}>
+          {saving ? 'Saving…' : 'Save Changes'}
         </AdminButton>
       </form>
 

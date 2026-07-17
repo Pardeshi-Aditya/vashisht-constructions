@@ -12,7 +12,7 @@ import {
 } from '@/components/admin/ui';
 
 export default function AdminFaq() {
-  const { content, updateContent } = useContent();
+  const { content, updateContent, saving } = useContent();
   const [items, setItems] = useState<FaqItem[]>(content.faq);
   const [toast, setToast] = useState(false);
 
@@ -95,8 +95,8 @@ export default function AdminFaq() {
           ))
         )}
 
-        <AdminButton type="submit" variant="primary">
-          Save Changes
+        <AdminButton type="submit" variant="primary" disabled={saving}>
+          {saving ? 'Saving…' : 'Save Changes'}
         </AdminButton>
       </form>
 

@@ -13,7 +13,7 @@ import {
 } from '@/components/admin/ui';
 
 export default function AdminTestimonials() {
-  const { content, updateContent } = useContent();
+  const { content, updateContent, saving } = useContent();
   const [items, setItems] = useState<TestimonialItem[]>(content.testimonials);
   const [toast, setToast] = useState(false);
 
@@ -110,8 +110,8 @@ export default function AdminTestimonials() {
           ))
         )}
 
-        <AdminButton type="submit" variant="primary">
-          Save Changes
+        <AdminButton type="submit" variant="primary" disabled={saving}>
+          {saving ? 'Saving…' : 'Save Changes'}
         </AdminButton>
       </form>
 

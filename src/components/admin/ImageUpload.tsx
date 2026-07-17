@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ImagePlus, X } from 'lucide-react';
-import { fileToOptimizedDataUrl } from '@/cms/images';
+import { fileToOptimizedBlob, assertImageWithinSizeLimit } from '@/cms/images';
 import { uploadAdminImage } from '@/cms/api';
 import { cn } from '@/utils/cn';
 
@@ -26,30 +26,59 @@ export function ImageUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
+  const previewRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewRef.current) {
+        URL.revokeObjectURL(previewRef.current);
+      }
+    };
+  }, []);
+
+  const setObjectPreview = (objectUrl: string | null) => {
+    if (previewRef.current) {
+      URL.revokeObjectURL(previewRef.current);
+    }
+    previewRef.current = objectUrl;
+    setPreview(objectUrl);
+  };
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
     setError('');
-    setLoading(true);
+
     try {
-      const dataUrl = await fileToOptimizedDataUrl(file);
-      try {
-        const url = await uploadAdminImage({
-          dataUrl,
-          folder,
-          filename: filename || file.name,
-        });
-        onChange(url);
-      } catch {
-        // Fallback: keep optimized data URL in form until content save materializes it
-        onChange(dataUrl);
-      }
+      assertImageWithinSizeLimit(file);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+      return;
+    }
+
+    setLoading(true);
+
+    // Instant local preview — never written into content JSON.
+    const objectUrl = URL.createObjectURL(file);
+    setObjectPreview(objectUrl);
+
+    try {
+      const blob = await fileToOptimizedBlob(file);
+      const url = await uploadAdminImage({
+        file: blob,
+        folder,
+        filename: filename || file.name.replace(/\.[^.]+$/, '') || 'image',
+      });
+      onChange(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
+      setObjectPreview(null);
       setLoading(false);
     }
   };
+
+  const displaySrc = preview || value;
 
   return (
     <div className={className}>
@@ -62,14 +91,18 @@ export function ImageUpload({
           aspect,
         )}
       >
-        {value ? (
+        {displaySrc ? (
           <>
-            <img src={value} alt={label} className="h-full w-full object-cover" />
+            <img src={displaySrc} alt={label} className="h-full w-full object-cover" />
             <button
               type="button"
-              onClick={() => onChange('')}
+              onClick={() => {
+                setObjectPreview(null);
+                onChange('');
+              }}
               className="absolute top-2 right-2 bg-charcoal/80 p-1.5 text-white transition-colors hover:bg-charcoal"
               aria-label={`Remove ${label}`}
+              disabled={loading}
             >
               <X size={14} strokeWidth={1.5} />
             </button>
@@ -87,8 +120,13 @@ export function ImageUpload({
             </span>
           </button>
         )}
+        {loading && displaySrc && (
+          <div className="absolute inset-0 flex items-center justify-center bg-charcoal/40">
+            <span className="text-xs tracking-wide text-white">Processing…</span>
+          </div>
+        )}
       </div>
-      {value && (
+      {value && !loading && (
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
@@ -124,28 +162,57 @@ export function GalleryUpload({
   folder = 'uploads',
 }: GalleryUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const pendingRef = useRef<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
+
+  useEffect(() => {
+    return () => {
+      pendingRef.current.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files?.length) return;
+    setError('');
+
+    const fileList = Array.from(files);
+    try {
+      for (const file of fileList) {
+        assertImageWithinSizeLimit(file, file.name || 'Image');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+      return;
+    }
+
     setLoading(true);
+    const objectUrls = fileList.map((file) => URL.createObjectURL(file));
+    pendingRef.current = objectUrls;
+    setPendingPreviews(objectUrls);
+
     try {
       const uploads: string[] = [];
-      for (const file of Array.from(files)) {
-        const dataUrl = await fileToOptimizedDataUrl(file);
-        try {
-          const url = await uploadAdminImage({
-            dataUrl,
-            folder,
-            filename: file.name,
-          });
-          uploads.push(url);
-        } catch {
-          uploads.push(dataUrl);
-        }
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        const blob = await fileToOptimizedBlob(file);
+        const url = await uploadAdminImage({
+          file: blob,
+          folder,
+          filename:
+            file.name.replace(/\.[^.]+$/, '') ||
+            `gallery-${Date.now()}-${i + 1}`,
+        });
+        uploads.push(url);
       }
       onChange([...images, ...uploads]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+      pendingRef.current = [];
+      setPendingPreviews([]);
       setLoading(false);
     }
   };
@@ -168,7 +235,7 @@ export function GalleryUpload({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {images.map((image, index) => (
           <div
-            key={`${image.slice(0, 40)}-${index}`}
+            key={`${image}-${index}`}
             className="group relative aspect-[4/3] overflow-hidden bg-stone"
           >
             <img
@@ -186,15 +253,34 @@ export function GalleryUpload({
             </button>
           </div>
         ))}
+        {pendingPreviews.map((preview, index) => (
+          <div
+            key={`pending-${index}`}
+            className="relative aspect-[4/3] overflow-hidden bg-stone"
+          >
+            <img
+              src={preview}
+              alt={`Uploading ${index + 1}`}
+              className="h-full w-full object-cover opacity-70"
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-charcoal/30">
+              <span className="text-[10px] tracking-wide text-white uppercase">
+                Uploading…
+              </span>
+            </div>
+          </div>
+        ))}
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
+          disabled={loading}
           className="flex aspect-[4/3] flex-col items-center justify-center gap-2 border border-dashed border-stone text-warm-gray transition-colors hover:bg-stone/30 hover:text-charcoal"
         >
           <ImagePlus size={18} strokeWidth={1.5} />
           <span className="text-[10px] tracking-wide uppercase">Add</span>
         </button>
       </div>
+      {error && <p className="mt-2 text-xs text-red-700">{error}</p>}
       <input
         ref={inputRef}
         type="file"
