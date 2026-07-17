@@ -199,29 +199,28 @@ export default function AdminProjectForm() {
         </AdminCard>
 
         <AdminCard title="Images">
+          <p className="mb-6 text-xs text-warm-gray">
+            Upload images to your shared Drive, set them to “anyone with the link”, then
+            paste the URLs below.
+          </p>
           <div className="grid gap-6 sm:grid-cols-2">
             <ImageUpload
               label="Hero Image"
               value={form.heroImage}
               onChange={(v) => update('heroImage', v)}
               aspect="aspect-[16/10]"
-              folder={`projects/${form.slug || 'draft'}`}
-              filename="hero"
             />
             <ImageUpload
               label="Thumbnail"
               value={form.thumbnail}
               onChange={(v) => update('thumbnail', v)}
               aspect="aspect-[4/3]"
-              folder={`projects/${form.slug || 'draft'}`}
-              filename="thumb"
             />
           </div>
           <div className="mt-8">
             <GalleryUpload
               images={form.gallery}
               onChange={(gallery) => update('gallery', gallery)}
-              folder={`projects/${form.slug || 'draft'}`}
             />
           </div>
         </AdminCard>

@@ -1,9 +1,6 @@
 import {
   assertNoEmbeddedImages,
-  MAX_IMAGE_BYTES,
   readSiteContent,
-  resolveUploadPaths,
-  saveUploadedImageBuffer,
   writeSiteContent,
 } from '../../server/contentWriter.mjs';
 
@@ -30,9 +27,11 @@ function isAuthorized(event) {
 /**
  * Production admin API.
  *
- * Netlify's function bundle is read-only, so filesystem writes only work in
- * `netlify dev` / local Vite. Production persistence uses GitHub commits:
+ * Netlify's function bundle is read-only for the deploy package.
+ * Content JSON is committed via GitHub when configured:
  *   GITHUB_TOKEN, GITHUB_REPO (owner/repo), GITHUB_BRANCH (default main)
+ *
+ * Images are hosted externally (shared Drive / CDN); admin only stores URLs.
  */
 async function commitToGitHub(files, message = 'chore: update site content from admin') {
   const token = process.env.GITHUB_TOKEN;
@@ -181,19 +180,6 @@ function parseRequestPath(event) {
   );
 }
 
-function getQuery(event) {
-  return event.queryStringParameters || {};
-}
-
-function readBinaryBody(event) {
-  const raw = event.body || '';
-  if (!raw) return Buffer.alloc(0);
-  if (event.isBase64Encoded) {
-    return Buffer.from(raw, 'base64');
-  }
-  return Buffer.from(raw, 'binary');
-}
-
 export async function handler(event) {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: corsHeaders, body: '' };
@@ -223,100 +209,6 @@ export async function handler(event) {
       }
     }
 
-    if (event.httpMethod === 'POST' && requestPath.includes('/upload')) {
-      const query = getQuery(event);
-      const buffer = readBinaryBody(event);
-      const mimeType =
-        event.headers['content-type'] ||
-        event.headers['Content-Type'] ||
-        'image/jpeg';
-      const folder = query.folder || 'uploads';
-      const filename = query.filename || `image-${Date.now()}`;
-
-      if (!buffer.length) {
-        return json(400, {
-          ok: false,
-          error: 'Empty upload body. Send the image as raw binary.',
-        });
-      }
-
-      if (buffer.length > MAX_IMAGE_BYTES) {
-        const sizeMb = (buffer.length / (1024 * 1024)).toFixed(1);
-        return json(400, {
-          ok: false,
-          error: `Image is ${sizeMb}MB. Maximum allowed size is 2MB.`,
-        });
-      }
-
-      const { publicPath, repoPath } = resolveUploadPaths({
-        mimeType,
-        folder,
-        filename,
-      });
-
-      const persisted = [];
-      const allowFilesystem =
-        !process.env.AWS_LAMBDA_FUNCTION_NAME ||
-        process.env.NETLIFY_DEV === 'true';
-
-      if (allowFilesystem) {
-        try {
-          saveUploadedImageBuffer({ buffer, mimeType, folder, filename });
-          persisted.push('filesystem');
-        } catch {
-          // Ignore — production path uses GitHub below
-        }
-      }
-
-      // Production (and optional local): commit into the repo so deploys serve the asset
-      let git;
-      try {
-        git = await commitToGitHub(
-          [
-            {
-              path: repoPath,
-              content: buffer.toString('base64'),
-              encoding: 'base64',
-            },
-          ],
-          `chore: upload ${repoPath} from admin`,
-        );
-        if (git.committed) persisted.push('github');
-      } catch (error) {
-        if (!persisted.length) {
-          return json(502, {
-            ok: false,
-            error:
-              error instanceof Error
-                ? error.message
-                : 'Failed to commit image to GitHub',
-          });
-        }
-        git = {
-          committed: false,
-          reason: error instanceof Error ? error.message : 'GitHub commit failed',
-        };
-      }
-
-      if (!persisted.length) {
-        return json(501, {
-          ok: false,
-          error:
-            'Image upload requires GITHUB_TOKEN + GITHUB_REPO on Netlify (production), or local `npm run dev` for filesystem writes.',
-        });
-      }
-
-      return json(200, {
-        ok: true,
-        url: publicPath,
-        persisted: persisted.join('+'),
-        git,
-        message: git?.committed
-          ? 'Image committed to GitHub. It will be live after Netlify redeploys.'
-          : 'Image saved to public/images.',
-      });
-    }
-
     if (event.httpMethod === 'POST' && requestPath.includes('/content')) {
       let body;
       try {
@@ -328,7 +220,7 @@ export async function handler(event) {
         return json(400, {
           ok: false,
           error:
-            'Invalid JSON payload. Do not embed Base64 images in content — upload via /api/admin/upload first.',
+            'Invalid JSON payload. Do not embed Base64 images — paste public image URLs instead.',
         });
       }
 

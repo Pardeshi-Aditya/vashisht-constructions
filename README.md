@@ -47,17 +47,13 @@ data/
     ganraj-apartment.json
 ```
 
-Images live in **`public/images/`** (mirrored by slug) and are referenced by path in those JSON files:
+Bundled fallback images can still live under **`public/images/`**. New images should be hosted on Drive/CDN and referenced by URL in JSON:
 
 ```
-public/images/
+public/images/          # optional legacy / default assets
   hero/hero.webp
   about/studio.webp
-  projects/
-    ganraj-apartment/
-      hero.jpeg
-      thumb.jpeg
-      1.jpeg …
+  projects/…
 ```
 
 App code stays under **`src/`** — no content or media duplicates there.
@@ -69,13 +65,22 @@ Visit `/admin/login`
 - **Username:** `yash`
 - **Password:** `aditya`
 
-While `npm run dev` is running, saving in the admin panel **writes directly to the `data/` JSON files** (and image uploads to `public/images/`).
+While `npm run dev` is running, saving in the admin panel **writes directly to the `data/` JSON files**. Images are hosted externally (shared Drive / CDN); admin stores only their public URLs.
+
+### Images
+
+1. Upload the file to Google Drive (or Dropbox / any host)
+2. Set sharing to **anyone with the link**
+3. Paste the link into the admin image field
+4. Preview updates immediately; save content as usual
+
+Google Drive and Dropbox share links are normalized to direct view URLs automatically.
 
 ### Global publish workflow
 
 1. Run `npm run dev`
 2. Edit content in `/admin`
-3. Confirm the files under `data/` (and `public/images/`) changed
+3. Confirm the files under `data/` changed
 4. Commit + push
 5. Netlify redeploys → every visitor sees the update
 
@@ -87,7 +92,7 @@ In Netlify environment variables set:
 - `GITHUB_REPO` — `owner/repo`
 - `GITHUB_BRANCH` — usually `main`
 
-Then production admin saves **and image uploads** can commit to GitHub and trigger a redeploy automatically.
+Then production admin saves can commit JSON changes and trigger a redeploy automatically.
 
 ## Deploy to Netlify
 

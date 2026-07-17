@@ -79,8 +79,6 @@ export default function AdminHome() {
               value={hero.image}
               onChange={(image) => setHero({ ...hero, image })}
               aspect="aspect-video"
-              folder="hero"
-              filename="hero"
             />
           </div>
         </AdminCard>

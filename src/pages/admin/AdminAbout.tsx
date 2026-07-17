@@ -129,8 +129,6 @@ export default function AdminAbout() {
             onChange={setAboutImage}
             aspect="aspect-[4/3]"
             className="max-w-md"
-            folder="about"
-            filename="studio"
           />
         </AdminCard>
 

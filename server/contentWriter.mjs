@@ -34,13 +34,13 @@ function looksLikeEmbeddedBase64(value) {
 
 /**
  * Walk the content tree and reject any embedded Base64 / data-URL images.
- * Content JSON must only store static path strings like "/images/projects/slug/hero.jpg".
+ * Image fields must be public URLs (or legacy /images/ paths) — never Base64.
  */
 export function assertNoEmbeddedImages(value, trail = 'content') {
   if (typeof value === 'string') {
     if (looksLikeEmbeddedBase64(value)) {
       throw new Error(
-        `Embedded image data is not allowed in ${trail}. Upload images via /api/admin/upload and store only path strings (e.g. "/images/projects/slug/hero.jpg").`,
+        `Embedded image data is not allowed in ${trail}. Paste a public image URL instead (e.g. from Google Drive).`,
       );
     }
     return;
@@ -60,91 +60,10 @@ export function assertNoEmbeddedImages(value, trail = 'content') {
   }
 }
 
-function extensionFromMime(mimeType) {
-  const type = String(mimeType || '')
-    .toLowerCase()
-    .split(';')[0]
-    .trim();
-  const map = {
-    'image/jpeg': 'jpg',
-    'image/jpg': 'jpg',
-    'image/png': 'png',
-    'image/webp': 'webp',
-    'image/gif': 'gif',
-    'image/svg+xml': 'svg',
-  };
-  return map[type] || 'jpg';
-}
-
-function sanitizeFolder(folder) {
-  return String(folder || 'uploads')
-    .replace(/\.\./g, '')
-    .replace(/^\/+|\/+$/g, '')
-    .replace(/[^a-zA-Z0-9/_-]/g, '');
-}
-
-function sanitizeFilename(filename) {
-  return String(filename || `image-${Date.now()}`)
-    .replace(/\.[^.]+$/, '')
-    .replace(/[^a-zA-Z0-9_-]/g, '-')
-    .toLowerCase() || `image-${Date.now()}`;
-}
-
-/** Maximum allowed upload size for admin images. */
-export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-
-/**
- * Resolve where an upload should live (public URL + repo path) without writing.
- */
-export function resolveUploadPaths({
-  mimeType = 'image/jpeg',
-  folder = 'uploads',
-  filename,
-}) {
-  const safeFolder = sanitizeFolder(folder);
-  const safeName = sanitizeFilename(filename);
-  const ext = extensionFromMime(mimeType);
-  const publicPath = `/images/${safeFolder}/${safeName}.${ext}`;
-  return {
-    publicPath,
-    repoPath: `public${publicPath}`,
-    ext,
-  };
-}
-
-/**
- * Write a binary image buffer into public/images/{folder}/{filename}.{ext}
- * and return the public path string.
- */
-export function saveUploadedImageBuffer({
-  buffer,
-  mimeType = 'image/jpeg',
-  folder = 'uploads',
-  filename,
-}) {
-  if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
-    throw new Error('Expected a non-empty image buffer');
-  }
-
-  if (buffer.length > MAX_IMAGE_BYTES) {
-    const sizeMb = (buffer.length / (1024 * 1024)).toFixed(1);
-    throw new Error(
-      `Image is ${sizeMb}MB. Maximum allowed size is 2MB.`,
-    );
-  }
-
-  const { publicPath } = resolveUploadPaths({ mimeType, folder, filename });
-  const absolute = path.join(ROOT, 'public', publicPath.replace(/^\//, ''));
-
-  ensureDir(path.dirname(absolute));
-  fs.writeFileSync(absolute, buffer);
-  return publicPath;
-}
-
 /**
  * Persist full site content into segregated JSON files under /data.
- * Image fields must already be static path strings — never Base64.
- * Removed projects also delete their public/images/projects/{slug} folders.
+ * Image fields are URL strings (external Drive/CDN or legacy /images/ paths).
+ * Removed projects also clean leftover public/images/projects/{slug} folders.
  *
  * @returns {{ content: object, deletedFiles: string[] }}
  */
@@ -349,15 +268,6 @@ export function readSiteContent() {
   };
 }
 
-export function readRequestBuffer(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.on('data', (chunk) => chunks.push(chunk));
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', reject);
-  });
-}
-
 export function parseBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -371,7 +281,7 @@ export function parseBody(req) {
           error instanceof Error ? error.message : 'Invalid JSON';
         reject(
           new Error(
-            `Invalid JSON payload (${message}). Do not embed Base64 images in content — upload via /api/admin/upload first.`,
+            `Invalid JSON payload (${message}). Do not embed Base64 images — paste public image URLs instead.`,
           ),
         );
       }
@@ -384,20 +294,4 @@ export function sendJson(res, status, payload) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify(payload));
-}
-
-/**
- * Handle a binary image upload request (Vite middleware or similar).
- * Query: ?folder=projects/slug&filename=hero
- * Body: raw image bytes
- */
-export async function handleBinaryImageUpload(req) {
-  const host = req.headers.host || 'localhost';
-  const url = new URL(req.url || '/api/admin/upload', `http://${host}`);
-  const folder = url.searchParams.get('folder') || 'uploads';
-  const filename = url.searchParams.get('filename') || `image-${Date.now()}`;
-  const buffer = await readRequestBuffer(req);
-  const mimeType = req.headers['content-type'] || 'image/jpeg';
-
-  return saveUploadedImageBuffer({ buffer, mimeType, folder, filename });
 }

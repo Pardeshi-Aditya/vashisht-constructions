@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ImagePlus, X } from 'lucide-react';
-import { fileToOptimizedBlob, assertImageWithinSizeLimit } from '@/cms/images';
-import { uploadAdminImage } from '@/cms/api';
+import { ImagePlus, Link2, X } from 'lucide-react';
+import { normalizeImageUrl, isUsableImageUrl } from '@/cms/images';
 import { cn } from '@/utils/cn';
 
 interface ImageUploadProps {
@@ -10,8 +9,7 @@ interface ImageUploadProps {
   onChange: (value: string) => void;
   aspect?: string;
   className?: string;
-  folder?: string;
-  filename?: string;
+  hint?: string;
 }
 
 export function ImageUpload({
@@ -20,73 +18,38 @@ export function ImageUpload({
   onChange,
   aspect = 'aspect-video',
   className,
-  folder = 'uploads',
-  filename,
+  hint = 'Paste a public image link from your shared Drive or CDN',
 }: ImageUploadProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [draft, setDraft] = useState(value);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
-  const previewRef = useRef<string | null>(null);
+  const [broken, setBroken] = useState(false);
 
   useEffect(() => {
-    return () => {
-      if (previewRef.current) {
-        URL.revokeObjectURL(previewRef.current);
-      }
-    };
-  }, []);
-
-  const setObjectPreview = (objectUrl: string | null) => {
-    if (previewRef.current) {
-      URL.revokeObjectURL(previewRef.current);
-    }
-    previewRef.current = objectUrl;
-    setPreview(objectUrl);
-  };
-
-  const handleFile = async (file: File | undefined) => {
-    if (!file) return;
+    setDraft(value);
+    setBroken(false);
     setError('');
+  }, [value]);
 
-    try {
-      assertImageWithinSizeLimit(file);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
+  const applyUrl = (raw: string) => {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      onChange('');
+      setError('');
+      setBroken(false);
       return;
     }
 
-    setLoading(true);
-
-    // Instant local preview — never written into content JSON.
-    const objectUrl = URL.createObjectURL(file);
-    setObjectPreview(objectUrl);
-
-    try {
-      const blob = await fileToOptimizedBlob(file);
-      const url = await uploadAdminImage({
-        file: blob,
-        folder,
-        filename: filename || file.name.replace(/\.[^.]+$/, '') || 'image',
-      });
-      onChange(url);
-      // Keep local preview until the committed/static asset is reachable
-      // (production images appear after Netlify redeploy).
-      const probe = new Image();
-      probe.onload = () => setObjectPreview(null);
-      probe.onerror = () => {
-        /* keep blob preview; path is already stored for save */
-      };
-      probe.src = url;
-    } catch (err) {
-      setObjectPreview(null);
-      setError(err instanceof Error ? err.message : 'Upload failed');
-    } finally {
-      setLoading(false);
+    const normalized = normalizeImageUrl(trimmed);
+    if (!isUsableImageUrl(normalized)) {
+      setError('Enter a full image URL starting with https:// (or a /images/… path)');
+      return;
     }
-  };
 
-  const displaySrc = preview || value;
+    setError('');
+    setBroken(false);
+    setDraft(normalized);
+    onChange(normalized);
+  };
 
   return (
     <div className={className}>
@@ -99,61 +62,73 @@ export function ImageUpload({
           aspect,
         )}
       >
-        {displaySrc ? (
+        {value && !broken ? (
           <>
-            <img src={displaySrc} alt={label} className="h-full w-full object-cover" />
+            <img
+              src={value}
+              alt={label}
+              className="h-full w-full object-cover"
+              onError={() => setBroken(true)}
+              onLoad={() => setBroken(false)}
+            />
             <button
               type="button"
               onClick={() => {
-                setObjectPreview(null);
+                setDraft('');
                 onChange('');
+                setBroken(false);
+                setError('');
               }}
               className="absolute top-2 right-2 bg-charcoal/80 p-1.5 text-white transition-colors hover:bg-charcoal"
               aria-label={`Remove ${label}`}
-              disabled={loading}
             >
               <X size={14} strokeWidth={1.5} />
             </button>
           </>
         ) : (
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            disabled={loading}
-            className="flex h-full w-full flex-col items-center justify-center gap-2 text-warm-gray transition-colors hover:bg-stone/40 hover:text-charcoal"
-          >
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-warm-gray">
             <ImagePlus size={22} strokeWidth={1.5} />
             <span className="text-xs tracking-wide">
-              {loading ? 'Processing…' : 'Upload image'}
+              {broken ? 'Couldn’t load this image — check the link' : 'Paste an image link below'}
             </span>
-          </button>
-        )}
-        {loading && displaySrc && (
-          <div className="absolute inset-0 flex items-center justify-center bg-charcoal/40">
-            <span className="text-xs tracking-wide text-white">Processing…</span>
           </div>
         )}
       </div>
-      {value && !loading && (
+
+      <div className="mt-3 flex gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Link2
+            size={14}
+            strokeWidth={1.5}
+            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-warm-gray"
+          />
+          <input
+            type="url"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => {
+              if (draft.trim() !== value) applyUrl(draft);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                applyUrl(draft);
+              }
+            }}
+            placeholder="https://…"
+            className="w-full border border-stone bg-white py-2.5 pr-3 pl-9 text-sm text-charcoal placeholder:text-warm-gray/60 focus:border-accent focus:outline-none"
+          />
+        </div>
         <button
           type="button"
-          onClick={() => inputRef.current?.click()}
-          className="mt-2 text-xs text-accent hover:underline"
+          onClick={() => applyUrl(draft)}
+          className="shrink-0 border border-stone px-3 text-xs tracking-wide text-charcoal uppercase transition-colors hover:border-charcoal"
         >
-          Replace image
+          Apply
         </button>
-      )}
+      </div>
+      <p className="mt-1.5 text-xs text-warm-gray">{hint}</p>
       {error && <p className="mt-1 text-xs text-red-700">{error}</p>}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          void handleFile(e.target.files?.[0]);
-          e.target.value = '';
-        }}
-      />
     </div>
   );
 }
@@ -161,85 +136,73 @@ export function ImageUpload({
 interface GalleryUploadProps {
   images: string[];
   onChange: (images: string[]) => void;
-  folder?: string;
 }
 
-export function GalleryUpload({
-  images,
-  onChange,
-  folder = 'uploads',
-}: GalleryUploadProps) {
+export function GalleryUpload({ images, onChange }: GalleryUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const pendingRef = useRef<string[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
-  const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
 
-  useEffect(() => {
-    return () => {
-      pendingRef.current.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, []);
+  const addImage = () => {
+    const normalized = normalizeImageUrl(draft.trim());
+    if (!normalized) return;
 
-  const handleFiles = async (files: FileList | null) => {
-    if (!files?.length) return;
-    setError('');
-
-    const fileList = Array.from(files);
-    try {
-      for (const file of fileList) {
-        assertImageWithinSizeLimit(file, file.name || 'Image');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
+    if (!isUsableImageUrl(normalized)) {
+      setError('Enter a full image URL starting with https://');
       return;
     }
 
-    setLoading(true);
-    const objectUrls = fileList.map((file) => URL.createObjectURL(file));
-    pendingRef.current = objectUrls;
-    setPendingPreviews(objectUrls);
-
-    try {
-      const uploads: string[] = [];
-      for (let i = 0; i < fileList.length; i++) {
-        const file = fileList[i];
-        const blob = await fileToOptimizedBlob(file);
-        const url = await uploadAdminImage({
-          file: blob,
-          folder,
-          filename:
-            file.name.replace(/\.[^.]+$/, '') ||
-            `gallery-${Date.now()}-${i + 1}`,
-        });
-        uploads.push(url);
-      }
-      onChange([...images, ...uploads]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
-    } finally {
-      objectUrls.forEach((url) => URL.revokeObjectURL(url));
-      pendingRef.current = [];
-      setPendingPreviews([]);
-      setLoading(false);
+    if (images.includes(normalized)) {
+      setError('That image is already in the gallery');
+      return;
     }
+
+    onChange([...images, normalized]);
+    setDraft('');
+    setError('');
   };
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-[10px] font-medium tracking-[0.15em] text-warm-gray uppercase">
-          Gallery ({images.length})
-        </p>
+      <p className="mb-3 text-[10px] font-medium tracking-[0.15em] text-warm-gray uppercase">
+        Gallery ({images.length})
+      </p>
+
+      <div className="mb-4 flex gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Link2
+            size={14}
+            strokeWidth={1.5}
+            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-warm-gray"
+          />
+          <input
+            ref={inputRef}
+            type="url"
+            value={draft}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              setError('');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addImage();
+              }
+            }}
+            placeholder="Paste image URL and add"
+            className="w-full border border-stone bg-white py-2.5 pr-3 pl-9 text-sm text-charcoal placeholder:text-warm-gray/60 focus:border-accent focus:outline-none"
+          />
+        </div>
         <button
           type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={loading}
-          className="text-xs text-accent hover:underline"
+          onClick={() => addImage()}
+          className="shrink-0 bg-accent px-4 text-xs font-medium tracking-[0.12em] text-white uppercase transition-colors hover:bg-accent-light"
         >
-          {loading ? 'Uploading…' : 'Add images'}
+          Add
         </button>
       </div>
+      {error && <p className="mb-3 text-xs text-red-700">{error}</p>}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {images.map((image, index) => (
           <div
@@ -261,45 +224,19 @@ export function GalleryUpload({
             </button>
           </div>
         ))}
-        {pendingPreviews.map((preview, index) => (
-          <div
-            key={`pending-${index}`}
-            className="relative aspect-[4/3] overflow-hidden bg-stone"
-          >
-            <img
-              src={preview}
-              alt={`Uploading ${index + 1}`}
-              className="h-full w-full object-cover opacity-70"
-            />
-            <div className="absolute inset-0 flex items-center justify-center bg-charcoal/30">
-              <span className="text-[10px] tracking-wide text-white uppercase">
-                Uploading…
-              </span>
-            </div>
-          </div>
-        ))}
         <button
           type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={loading}
+          onClick={() => inputRef.current?.focus()}
           className="flex aspect-[4/3] flex-col items-center justify-center gap-2 border border-dashed border-stone text-warm-gray transition-colors hover:bg-stone/30 hover:text-charcoal"
         >
           <ImagePlus size={18} strokeWidth={1.5} />
-          <span className="text-[10px] tracking-wide uppercase">Add</span>
+          <span className="text-[10px] tracking-wide uppercase">Add URL</span>
         </button>
       </div>
-      {error && <p className="mt-2 text-xs text-red-700">{error}</p>}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={(e) => {
-          void handleFiles(e.target.files);
-          e.target.value = '';
-        }}
-      />
+      <p className="mt-3 text-xs text-warm-gray">
+        Host images on your shared Drive (set sharing to anyone with the link), then paste
+        each public URL here.
+      </p>
     </div>
   );
 }

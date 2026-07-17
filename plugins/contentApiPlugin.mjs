@@ -1,6 +1,5 @@
 import {
   assertNoEmbeddedImages,
-  handleBinaryImageUpload,
   parseBody,
   readSiteContent,
   sendJson,
@@ -14,7 +13,7 @@ function isAdminAuthorized(req) {
 }
 
 /**
- * Vite middleware that writes /data JSON files and /public/images during local development.
+ * Vite middleware that writes /data JSON files during local development.
  */
 export function contentApiPlugin() {
   return {
@@ -50,7 +49,7 @@ export function contentApiPlugin() {
                 error:
                   error instanceof Error
                     ? error.message
-                    : 'Invalid JSON payload. Upload images via /api/admin/upload first.',
+                    : 'Invalid JSON payload.',
               });
               return;
             }
@@ -70,23 +69,6 @@ export function contentApiPlugin() {
                   error instanceof Error
                     ? error.message
                     : 'Invalid content payload',
-              });
-            }
-            return;
-          }
-
-          if (
-            req.method === 'POST' &&
-            req.url.split('?')[0] === '/api/admin/upload'
-          ) {
-            try {
-              const url = await handleBinaryImageUpload(req);
-              sendJson(res, 200, { ok: true, url });
-            } catch (error) {
-              sendJson(res, 400, {
-                ok: false,
-                error:
-                  error instanceof Error ? error.message : 'Upload failed',
               });
             }
             return;
