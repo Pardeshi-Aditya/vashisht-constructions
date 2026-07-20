@@ -4,6 +4,7 @@ import { SEO } from '@/components/common/SEO';
 import { Container } from '@/components/common/Container';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
+import { CmsImage } from '@/components/common/CmsImage';
 import { ProjectGallery } from '@/components/projects/ProjectGallery';
 import { ProjectCard } from '@/components/projects/ProjectCard';
 import { useContent } from '@/context/ContentContext';
@@ -30,7 +31,7 @@ export default function ProjectDetails() {
       />
 
       <section className="relative h-[50vh] min-h-[400px] sm:h-[60vh]">
-        <img
+        <CmsImage
           src={project.heroImage}
           alt={project.name}
           className="h-full w-full object-cover"

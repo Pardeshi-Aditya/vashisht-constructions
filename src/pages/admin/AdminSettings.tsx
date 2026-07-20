@@ -90,25 +90,26 @@ export default function AdminSettings() {
         <AdminCard title="How storage works">
           <div className="space-y-3 text-sm leading-relaxed text-warm-gray">
             <p>
-              Site copy and structure live in the{' '}
-              <code className="text-charcoal">data/</code> folder as JSON files.
+              Site copy lives in the <code className="text-charcoal">data/</code> folder as
+              JSON files.
             </p>
             <p>
-              Images are hosted on your shared Drive (or any CDN). In admin, paste
-              the public link — we store only that URL in content JSON. Google Drive
-              and Dropbox share links are normalized automatically for preview.
+              Images stay on Google Drive. Paste the share link in admin — we store that
+              URL and the website shows it with a normal{' '}
+              <code className="text-charcoal">&lt;img&gt;</code> tag. No CDN or server
+              upload.
             </p>
             <p>
               When you save while running{' '}
               <code className="text-charcoal">npm run dev</code>, the{' '}
-              <code className="text-charcoal">data/</code> files update on disk.
-              Commit and push for Netlify to redeploy.
+              <code className="text-charcoal">data/</code> files update on disk. Commit and
+              push for Netlify to redeploy.
             </p>
             <p>
               Optional production auto-commit: set{' '}
               <code className="text-charcoal">GITHUB_TOKEN</code> and{' '}
-              <code className="text-charcoal">GITHUB_REPO</code> in Netlify so live
-              admin saves commit JSON back to GitHub automatically.
+              <code className="text-charcoal">GITHUB_REPO</code> in Netlify so live admin
+              saves commit JSON back to GitHub automatically.
             </p>
           </div>
         </AdminCard>

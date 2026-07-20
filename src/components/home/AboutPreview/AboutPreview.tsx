@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowUpRight } from 'lucide-react';
 import { Container } from '@/components/common/Container';
+import { CmsImage } from '@/components/common/CmsImage';
 import { useContent } from '@/context/ContentContext';
 
 export function AboutPreview() {
@@ -22,7 +23,7 @@ export function AboutPreview() {
             transition={{ duration: 0.45 }}
             className="relative aspect-[4/5] overflow-hidden bg-stone lg:aspect-[3/4]"
           >
-            <img
+            <CmsImage
               src={aboutImage}
               alt={`${company.name} studio`}
               loading="lazy"

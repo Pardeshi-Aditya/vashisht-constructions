@@ -1,54 +1,38 @@
 import { useEffect, useRef, useState } from 'react';
-import { ImagePlus, Link2, X } from 'lucide-react';
-import { normalizeImageUrl, isUsableImageUrl } from '@/cms/images';
+import { ImagePlus, X } from 'lucide-react';
+import { toDriveImageUrl } from '@/cms/images';
+import { CmsImage } from '@/components/common/CmsImage';
 import { cn } from '@/utils/cn';
 
-interface ImageUploadProps {
+interface ImageFieldProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
   aspect?: string;
   className?: string;
-  hint?: string;
 }
 
+/** Preview + paste a Drive image URL. Stored value is used as <img src>. */
 export function ImageUpload({
   label,
   value,
   onChange,
   aspect = 'aspect-video',
   className,
-  hint = 'Paste a public image link from your shared Drive or CDN',
-}: ImageUploadProps) {
+}: ImageFieldProps) {
   const [draft, setDraft] = useState(value);
-  const [error, setError] = useState('');
   const [broken, setBroken] = useState(false);
 
   useEffect(() => {
     setDraft(value);
     setBroken(false);
-    setError('');
   }, [value]);
 
-  const applyUrl = (raw: string) => {
-    const trimmed = raw.trim();
-    if (!trimmed) {
-      onChange('');
-      setError('');
-      setBroken(false);
-      return;
-    }
-
-    const normalized = normalizeImageUrl(trimmed);
-    if (!isUsableImageUrl(normalized)) {
-      setError('Enter a full image URL starting with https:// (or a /images/… path)');
-      return;
-    }
-
-    setError('');
+  const commit = (raw: string) => {
+    const next = toDriveImageUrl(raw);
+    setDraft(next);
     setBroken(false);
-    setDraft(normalized);
-    onChange(normalized);
+    onChange(next);
   };
 
   return (
@@ -64,7 +48,7 @@ export function ImageUpload({
       >
         {value && !broken ? (
           <>
-            <img
+            <CmsImage
               src={value}
               alt={label}
               className="h-full w-full object-cover"
@@ -73,12 +57,7 @@ export function ImageUpload({
             />
             <button
               type="button"
-              onClick={() => {
-                setDraft('');
-                onChange('');
-                setBroken(false);
-                setError('');
-              }}
+              onClick={() => commit('')}
               className="absolute top-2 right-2 bg-charcoal/80 p-1.5 text-white transition-colors hover:bg-charcoal"
               aria-label={`Remove ${label}`}
             >
@@ -89,77 +68,51 @@ export function ImageUpload({
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-warm-gray">
             <ImagePlus size={22} strokeWidth={1.5} />
             <span className="text-xs tracking-wide">
-              {broken ? 'Couldn’t load this image — check the link' : 'Paste an image link below'}
+              {broken ? 'Link didn’t load — check Drive sharing' : 'Paste a Drive link below'}
             </span>
           </div>
         )}
       </div>
-
-      <div className="mt-3 flex gap-2">
-        <div className="relative min-w-0 flex-1">
-          <Link2
-            size={14}
-            strokeWidth={1.5}
-            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-warm-gray"
-          />
-          <input
-            type="url"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={() => {
-              if (draft.trim() !== value) applyUrl(draft);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                applyUrl(draft);
-              }
-            }}
-            placeholder="https://…"
-            className="w-full border border-stone bg-white py-2.5 pr-3 pl-9 text-sm text-charcoal placeholder:text-warm-gray/60 focus:border-accent focus:outline-none"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => applyUrl(draft)}
-          className="shrink-0 border border-stone px-3 text-xs tracking-wide text-charcoal uppercase transition-colors hover:border-charcoal"
-        >
-          Apply
-        </button>
-      </div>
-      <p className="mt-1.5 text-xs text-warm-gray">{hint}</p>
-      {error && <p className="mt-1 text-xs text-red-700">{error}</p>}
+      <input
+        type="url"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => {
+          if (draft.trim() !== value) commit(draft);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            commit(draft);
+          }
+        }}
+        placeholder="https://drive.google.com/file/d/…"
+        className="mt-3 w-full border border-stone bg-white px-3.5 py-2.5 text-sm text-charcoal placeholder:text-warm-gray/60 focus:border-accent focus:outline-none"
+      />
+      <p className="mt-1.5 text-xs text-warm-gray">
+        Share the file as “anyone with the link”, then paste the Drive URL.
+      </p>
     </div>
   );
 }
 
-interface GalleryUploadProps {
+interface GalleryFieldProps {
   images: string[];
   onChange: (images: string[]) => void;
 }
 
-export function GalleryUpload({ images, onChange }: GalleryUploadProps) {
+export function GalleryUpload({ images, onChange }: GalleryFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState('');
-  const [error, setError] = useState('');
 
-  const addImage = () => {
-    const normalized = normalizeImageUrl(draft.trim());
-    if (!normalized) return;
-
-    if (!isUsableImageUrl(normalized)) {
-      setError('Enter a full image URL starting with https://');
+  const add = () => {
+    const url = toDriveImageUrl(draft);
+    if (!url || images.includes(url)) {
+      setDraft('');
       return;
     }
-
-    if (images.includes(normalized)) {
-      setError('That image is already in the gallery');
-      return;
-    }
-
-    onChange([...images, normalized]);
+    onChange([...images, url]);
     setDraft('');
-    setError('');
   };
 
   return (
@@ -167,49 +120,36 @@ export function GalleryUpload({ images, onChange }: GalleryUploadProps) {
       <p className="mb-3 text-[10px] font-medium tracking-[0.15em] text-warm-gray uppercase">
         Gallery ({images.length})
       </p>
-
       <div className="mb-4 flex gap-2">
-        <div className="relative min-w-0 flex-1">
-          <Link2
-            size={14}
-            strokeWidth={1.5}
-            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-warm-gray"
-          />
-          <input
-            ref={inputRef}
-            type="url"
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              setError('');
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addImage();
-              }
-            }}
-            placeholder="Paste image URL and add"
-            className="w-full border border-stone bg-white py-2.5 pr-3 pl-9 text-sm text-charcoal placeholder:text-warm-gray/60 focus:border-accent focus:outline-none"
-          />
-        </div>
+        <input
+          ref={inputRef}
+          type="url"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              add();
+            }
+          }}
+          placeholder="Paste Drive image URL"
+          className="min-w-0 flex-1 border border-stone bg-white px-3.5 py-2.5 text-sm text-charcoal placeholder:text-warm-gray/60 focus:border-accent focus:outline-none"
+        />
         <button
           type="button"
-          onClick={() => addImage()}
+          onClick={add}
           className="shrink-0 bg-accent px-4 text-xs font-medium tracking-[0.12em] text-white uppercase transition-colors hover:bg-accent-light"
         >
           Add
         </button>
       </div>
-      {error && <p className="mb-3 text-xs text-red-700">{error}</p>}
-
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {images.map((image, index) => (
           <div
             key={`${image}-${index}`}
             className="group relative aspect-[4/3] overflow-hidden bg-stone"
           >
-            <img
+            <CmsImage
               src={image}
               alt={`Gallery ${index + 1}`}
               className="h-full w-full object-cover"
@@ -230,13 +170,9 @@ export function GalleryUpload({ images, onChange }: GalleryUploadProps) {
           className="flex aspect-[4/3] flex-col items-center justify-center gap-2 border border-dashed border-stone text-warm-gray transition-colors hover:bg-stone/30 hover:text-charcoal"
         >
           <ImagePlus size={18} strokeWidth={1.5} />
-          <span className="text-[10px] tracking-wide uppercase">Add URL</span>
+          <span className="text-[10px] tracking-wide uppercase">Add</span>
         </button>
       </div>
-      <p className="mt-3 text-xs text-warm-gray">
-        Host images on your shared Drive (set sharing to anyone with the link), then paste
-        each public URL here.
-      </p>
     </div>
   );
 }

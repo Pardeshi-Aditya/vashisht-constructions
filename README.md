@@ -47,16 +47,9 @@ data/
     ganraj-apartment.json
 ```
 
-Bundled fallback images can still live under **`public/images/`**. New images should be hosted on Drive/CDN and referenced by URL in JSON:
+Content JSON lives in **`data/`**. Images are Google Drive URLs referenced directly by `<img src>` — no CDN and no server-side image upload.
 
-```
-public/images/          # optional legacy / default assets
-  hero/hero.webp
-  about/studio.webp
-  projects/…
-```
-
-App code stays under **`src/`** — no content or media duplicates there.
+App code stays under **`src/`**.
 
 ## Admin Panel
 
@@ -65,16 +58,14 @@ Visit `/admin/login`
 - **Username:** `yash`
 - **Password:** `aditya`
 
-While `npm run dev` is running, saving in the admin panel **writes directly to the `data/` JSON files**. Images are hosted externally (shared Drive / CDN); admin stores only their public URLs.
+While `npm run dev` is running, saving in the admin panel **writes directly to the `data/` JSON files**.
 
 ### Images
 
-1. Upload the file to Google Drive (or Dropbox / any host)
+1. Upload the file to Google Drive
 2. Set sharing to **anyone with the link**
-3. Paste the link into the admin image field
-4. Preview updates immediately; save content as usual
-
-Google Drive and Dropbox share links are normalized to direct view URLs automatically.
+3. Paste the Drive link into the admin image field
+4. The site shows it with a normal image tag (share links are converted automatically)
 
 ### Global publish workflow
 

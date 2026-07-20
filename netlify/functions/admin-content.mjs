@@ -31,7 +31,7 @@ function isAuthorized(event) {
  * Content JSON is committed via GitHub when configured:
  *   GITHUB_TOKEN, GITHUB_REPO (owner/repo), GITHUB_BRANCH (default main)
  *
- * Images are hosted externally (shared Drive / CDN); admin only stores URLs.
+ * Images are Google Drive URLs used directly in <img src>; admin only stores the link.
  */
 async function commitToGitHub(files, message = 'chore: update site content from admin') {
   const token = process.env.GITHUB_TOKEN;

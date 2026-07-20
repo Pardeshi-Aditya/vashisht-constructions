@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { SEO } from '@/components/common/SEO';
 import { Container } from '@/components/common/Container';
 import { SectionTitle } from '@/components/common/SectionTitle';
+import { CmsImage } from '@/components/common/CmsImage';
 import { Stats } from '@/components/home/Stats';
 import { useContent } from '@/context/ContentContext';
 
@@ -27,7 +28,7 @@ export default function About() {
         <Container>
           <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
             <div className="relative aspect-[4/3] overflow-hidden bg-stone">
-              <img
+              <CmsImage
                 src={aboutImage}
                 alt={`${company.name} team at work`}
                 loading="lazy"

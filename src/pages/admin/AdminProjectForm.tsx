@@ -200,8 +200,8 @@ export default function AdminProjectForm() {
 
         <AdminCard title="Images">
           <p className="mb-6 text-xs text-warm-gray">
-            Upload images to your shared Drive, set them to “anyone with the link”, then
-            paste the URLs below.
+            Upload to Google Drive → share “anyone with the link” → paste the URL. The site
+            loads it with a normal image tag.
           </p>
           <div className="grid gap-6 sm:grid-cols-2">
             <ImageUpload

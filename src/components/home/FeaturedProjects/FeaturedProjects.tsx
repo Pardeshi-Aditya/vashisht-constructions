@@ -4,6 +4,7 @@ import { ArrowUpRight } from 'lucide-react';
 import { Container } from '@/components/common/Container';
 import { SectionTitle } from '@/components/common/SectionTitle';
 import { Badge } from '@/components/common/Badge';
+import { CmsImage } from '@/components/common/CmsImage';
 import { useContent } from '@/context/ContentContext';
 import { formatStatus } from '@/utils/project';
 
@@ -40,7 +41,7 @@ export function FeaturedProjects() {
             >
               <Link to={`/projects/${project.slug}`} className="group block">
                 <div className="relative aspect-[4/5] overflow-hidden bg-stone">
-                  <img
+                  <CmsImage
                     src={project.thumbnail}
                     alt={project.name}
                     loading="lazy"

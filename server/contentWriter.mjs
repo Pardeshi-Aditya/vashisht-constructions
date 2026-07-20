@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(__dirname, '..');
 export const DATA_DIR = path.join(ROOT, 'data');
-export const IMAGES_DIR = path.join(ROOT, 'public', 'images');
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -34,7 +33,7 @@ function looksLikeEmbeddedBase64(value) {
 
 /**
  * Walk the content tree and reject any embedded Base64 / data-URL images.
- * Image fields must be public URLs (or legacy /images/ paths) — never Base64.
+ * Image fields must be public URLs used directly in <img src>.
  */
 export function assertNoEmbeddedImages(value, trail = 'content') {
   if (typeof value === 'string') {
@@ -62,8 +61,7 @@ export function assertNoEmbeddedImages(value, trail = 'content') {
 
 /**
  * Persist full site content into segregated JSON files under /data.
- * Image fields are URL strings (external Drive/CDN or legacy /images/ paths).
- * Removed projects also clean leftover public/images/projects/{slug} folders.
+ * Image fields are URL strings (Google Drive links used directly in <img src>).
  *
  * @returns {{ content: object, deletedFiles: string[] }}
  */
@@ -77,11 +75,11 @@ export function writeSiteContent(content) {
   const company = content.company;
   const about = {
     ...content.about,
-    image: content.aboutImage || content.about?.image || '/images/about/studio.webp',
+    image: content.aboutImage || content.about?.image || '',
   };
   const hero = {
     ...content.hero,
-    image: content.hero?.image || '/images/hero/hero.webp',
+    image: content.hero?.image || '',
   };
 
   writeJson(path.join(DATA_DIR, 'company.json'), company);
@@ -129,116 +127,21 @@ export function writeSiteContent(content) {
   for (const file of existing) {
     const slug = file.replace(/\.json$/, '');
     if (!slugs.includes(slug)) {
-      const projectPath = path.join(projectsDir, file);
-      const project = readJson(projectPath, null);
       deletedFiles.push(`data/projects/${file}`);
-      fs.unlinkSync(projectPath);
-
-      if (project) {
-        const referenced = [
-          project.heroImage,
-          project.thumbnail,
-          ...(Array.isArray(project.gallery) ? project.gallery : []),
-        ];
-        deletedFiles.push(...removeReferencedProjectImages(referenced));
-      }
-      deletedFiles.push(...removeProjectImageFolder(slug));
+      fs.unlinkSync(path.join(projectsDir, file));
     }
   }
 
   return {
     content: readSiteContent(),
-    deletedFiles: [...new Set(deletedFiles)],
+    deletedFiles,
   };
-}
-
-/**
- * Delete specific project image files referenced in content (path strings).
- * Only allows paths under public/images/projects/.
- */
-export function removeReferencedProjectImages(imagePaths) {
-  const deleted = [];
-  const projectsRoot = path.resolve(IMAGES_DIR, 'projects');
-
-  for (const imagePath of imagePaths) {
-    if (typeof imagePath !== 'string' || !imagePath.startsWith('/images/projects/')) {
-      continue;
-    }
-
-    const absolute = path.resolve(ROOT, 'public', imagePath.replace(/^\//, ''));
-    if (
-      absolute !== projectsRoot &&
-      !absolute.startsWith(`${projectsRoot}${path.sep}`)
-    ) {
-      continue;
-    }
-
-    if (!fs.existsSync(absolute) || !fs.statSync(absolute).isFile()) continue;
-
-    fs.unlinkSync(absolute);
-    deleted.push(path.relative(ROOT, absolute).split(path.sep).join('/'));
-
-    // Clean empty parent directories up to projects/
-    let parent = path.dirname(absolute);
-    while (
-      parent.startsWith(`${projectsRoot}${path.sep}`) &&
-      parent !== projectsRoot
-    ) {
-      const entries = fs.existsSync(parent) ? fs.readdirSync(parent) : ['.'];
-      if (entries.length > 0) break;
-      fs.rmdirSync(parent);
-      parent = path.dirname(parent);
-    }
-  }
-
-  return deleted;
-}
-
-/**
- * Delete public/images/projects/{slug}/ and return repo-relative paths removed.
- */
-export function removeProjectImageFolder(slug) {
-  const safeSlug = String(slug || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/-+/g, '-');
-
-  if (!safeSlug) return [];
-
-  const folder = path.join(IMAGES_DIR, 'projects', safeSlug);
-  const projectsRoot = path.join(IMAGES_DIR, 'projects');
-  const resolved = path.resolve(folder);
-  if (
-    resolved !== path.resolve(projectsRoot) &&
-    !resolved.startsWith(`${path.resolve(projectsRoot)}${path.sep}`)
-  ) {
-    throw new Error('Invalid project image path');
-  }
-
-  if (!fs.existsSync(folder)) return [];
-
-  const deleted = [];
-  const walk = (dir) => {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const absolute = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walk(absolute);
-      } else {
-        deleted.push(
-          path.relative(ROOT, absolute).split(path.sep).join('/'),
-        );
-      }
-    }
-  };
-  walk(folder);
-  fs.rmSync(folder, { recursive: true, force: true });
-  return deleted;
 }
 
 export function readSiteContent() {
   const company = readJson(path.join(DATA_DIR, 'company.json'), {});
   const aboutFile = readJson(path.join(DATA_DIR, 'about.json'), {});
-  const { image: aboutImage = '/images/about/studio.webp', ...about } = aboutFile;
+  const { image: aboutImage = '', ...about } = aboutFile;
   const hero = readJson(path.join(DATA_DIR, 'hero.json'), {});
   const stats = readJson(path.join(DATA_DIR, 'stats.json'), []);
   const whyChooseUs = readJson(path.join(DATA_DIR, 'why-choose-us.json'), []);

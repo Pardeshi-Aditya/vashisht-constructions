@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useContent } from '@/context/ContentContext';
 import { AdminPageHeader, AdminCard } from '@/components/admin/ui';
+import { CmsImage } from '@/components/common/CmsImage';
 import { formatStatus } from '@/utils/project';
 
 export default function AdminDashboard() {
@@ -100,7 +101,7 @@ export default function AdminDashboard() {
                   >
                     <div className="h-12 w-16 shrink-0 overflow-hidden bg-stone">
                       {project.thumbnail && (
-                        <img
+                        <CmsImage
                           src={project.thumbnail}
                           alt=""
                           className="h-full w-full object-cover"

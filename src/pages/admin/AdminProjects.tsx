@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useContent } from '@/context/ContentContext';
 import { AdminPageHeader, AdminButton, Toast } from '@/components/admin/ui';
+import { CmsImage } from '@/components/common/CmsImage';
 import { formatStatus, formatType } from '@/utils/project';
 
 export default function AdminProjects() {
@@ -55,7 +56,7 @@ export default function AdminProjects() {
               >
                 <div className="h-20 w-full shrink-0 overflow-hidden bg-stone sm:h-16 sm:w-24">
                   {project.thumbnail ? (
-                    <img
+                    <CmsImage
                       src={project.thumbnail}
                       alt=""
                       className="h-full w-full object-cover"

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import type { Project } from '@/types/project';
 import { Badge } from '@/components/common/Badge';
+import { CmsImage } from '@/components/common/CmsImage';
 import { formatStatus, formatType } from '@/utils/project';
 
 interface ProjectCardProps {
@@ -19,7 +20,7 @@ export function ProjectCard({ project, index = 0 }: ProjectCardProps) {
     >
       <Link to={`/projects/${project.slug}`} className="group block">
         <div className="relative aspect-[4/3] overflow-hidden bg-stone">
-          <img
+          <CmsImage
             src={project.thumbnail}
             alt={project.name}
             loading="lazy"

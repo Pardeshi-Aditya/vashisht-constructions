@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { ArrowDown } from 'lucide-react';
 import { Button } from '@/components/common/Button';
+import { CmsImage } from '@/components/common/CmsImage';
 import { useContent } from '@/context/ContentContext';
 
 export function Hero() {
@@ -10,7 +11,7 @@ export function Hero() {
   return (
     <section className="relative flex min-h-[100svh] items-end overflow-hidden">
       <div className="absolute inset-0">
-        <img
+        <CmsImage
           src={hero.image}
           alt={`${company.name} luxury architecture`}
           className="h-full w-full object-cover"

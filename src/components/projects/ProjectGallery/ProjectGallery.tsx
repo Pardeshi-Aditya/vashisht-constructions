@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ImageLightbox } from '@/components/common/ImageLightbox';
+import { CmsImage } from '@/components/common/CmsImage';
 
 interface ProjectGalleryProps {
   images: string[];
@@ -30,7 +31,7 @@ export function ProjectGallery({ images, projectName }: ProjectGalleryProps) {
             className="group relative aspect-[4/3] overflow-hidden bg-stone"
             aria-label={`View ${projectName} image ${index + 1}`}
           >
-            <img
+            <CmsImage
               src={image}
               alt={`${projectName} gallery image ${index + 1}`}
               loading="lazy"

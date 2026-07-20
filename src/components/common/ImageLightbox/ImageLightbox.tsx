@@ -92,6 +92,7 @@ export function ImageLightbox({
             transition={{ duration: 0.3 }}
             src={images[currentIndex]}
             alt={`${alt} - image ${currentIndex + 1}`}
+            referrerPolicy="no-referrer"
             className="max-h-[85vh] max-w-[90vw] object-contain"
           />
 
